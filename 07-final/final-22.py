@@ -92,7 +92,88 @@ def plan(road, lane_change_cost, init, goal): # Don't change the name of this fu
     # Insert Code Here
     #
     #
-    return cost
+
+    closed = [[0 for row in range(len(road[0]))] for col in range(len(road))]
+    closed[init[0]][init[1]] = 1
+
+    x    = init[0]
+    y    = init[1]
+    cost = 0.0
+
+    open = [[cost, x, y]]
+
+    resign = False
+
+    # There are three ways we can move. [dx, dy, additional_cost]
+    delta = [[ 0, 1,                     0.0],  # forward
+             [-1, 1, float(lane_change_cost)],  # lane change left
+             [ 1, 1, float(lane_change_cost)]]  # lane change right
+
+    # NOTE: We can find the optimal solution with a simple cost-aware
+    #       breadth-first search. Since that seems to be the easiest route,
+    #       pramatism wins and we'll go with that. If it's performance =
+    #       prevents it from being accepted, we'll try optimzing with
+    #       a heuristic function, making it an A* search.
+    while True:
+        if len(open) == 0:
+            # There is nothing left to expand and we haven't found the
+            # goal yet. Time to give up.
+            raise Exception("No path can be found")
+        else:
+            open.sort()
+            open.reverse()
+            next = open.pop()
+            cost = next[0]
+            x    = next[1]
+            y    = next[2]
+
+            if x == goal[0] and y == goal[1]:
+                return cost
+            else:
+                # Try each direction we can move.
+                for d in delta:
+                    x2 = x + d[0]
+                    y2 = y + d[1]
+                    # Only expand in this direction if it does not go off road
+                    if x2 >= 0 and x2 < len(road) and y2 >= 0 and y2 < len(road[0]):
+                        # Only expand in this direction if it is not
+                        # obstructed (which we will test with a tolerance around
+                        # zero just in case they throw some crazy floats at us)
+                        if abs(float(road[x2][y2])) > 0.00001:
+                            # Compute the cost of this cell to expand, when
+                            # coming from this current cell.
+                            cost2 = cost + (1.0 / road[x2][y2]) + d[2]
+
+                            # If we have never expanded this cell before,
+                            # *or* the cost of getting there this way is
+                            # cheaper than any other way we have gotten here
+                            # before, then record the new lowest cost, and
+                            # make sure it is represented in the open list
+                            # with the new lower cost
+                            if closed[x2][y2] == 0 or closed[x2][y2] > cost2:
+                                # Record the lowest seen cost for this cell
+                                closed[x2][y2] = cost2
+
+                                # Find this coord in the open list. Too
+                                # bad I don't know python well enough to use
+                                # a nice library function. Time pressure - going
+                                # for the brute force loop mechanism.
+                                found = None
+                                for c in open:
+                                    if c[1] == x2 and c[2] == y2:
+                                        found = c
+                                        break
+
+                                # If we found this cell in the open list
+                                # already, just update its cost.
+                                # Otherwise, add it to the open list.
+                                # (Note: This could be "reopening" it).
+                                if found:
+                                    found[0] = cost2
+                                else:
+                                    open.append([cost2, x2, y2])
+
+
 
 ################# TESTING ##################
        
@@ -164,7 +245,7 @@ testing_suite = [[test_road1, test_road2, test_road3, test_road4],
                  [test_goal1, test_goal2, test_goal3, test_goal4],
                  [true_cost1, true_cost2, true_cost3, true_cost4]]
 
-#solution_check(testing_suite) #UNCOMMENT THIS LINE TO TEST YOUR CODE
+solution_check(testing_suite) #UNCOMMENT THIS LINE TO TEST YOUR CODE
 
 
 
